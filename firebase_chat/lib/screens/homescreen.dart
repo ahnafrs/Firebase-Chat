@@ -32,21 +32,23 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
-      // online
       setStatus("Online");
     } else {
-      // offline
       setStatus("Offline");
     }
   }
 
   String chatRoomId(String user1, String user2) {
-    if (user1[0].toLowerCase().codeUnits[0] >
-        user2.toLowerCase().codeUnits[0]) {
-      return "$user1$user2";
-    } else {
-      return "$user2$user1";
-    }
+    // Remove "@" and "." characters from the email addresses
+    user1 = user1.replaceAll('@', '').replaceAll('.', '');
+    user2 = user2.replaceAll('@', '').replaceAll('.', '');
+
+    // Sort the email addresses to ensure consistency
+    List<String> users = [user1, user2];
+    users.sort();
+
+    // Combine the sanitized email addresses
+    return "${users[0]}_${users[1]}";
   }
 
   void onSearch() async {

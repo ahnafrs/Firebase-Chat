@@ -2,12 +2,17 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
-class ChatRoom extends StatelessWidget {
+class ChatRoom extends StatefulWidget {
   final Map<String, dynamic> userMap;
   final String chatRoomId;
 
   ChatRoom({required this.chatRoomId, required this.userMap});
 
+  @override
+  _ChatRoomState createState() => _ChatRoomState();
+}
+
+class _ChatRoomState extends State<ChatRoom> {
   final TextEditingController _message = TextEditingController();
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -15,7 +20,7 @@ class ChatRoom extends StatelessWidget {
   void onSendMessage() async {
     if (_message.text.isNotEmpty) {
       Map<String, dynamic> messages = {
-        "sendby": _auth.currentUser!.displayName,
+        "sendby": _auth.currentUser!.email,
         "message": _message.text,
         "type": "text",
         "time": FieldValue.serverTimestamp(),
@@ -24,7 +29,7 @@ class ChatRoom extends StatelessWidget {
       _message.clear();
       await _firestore
           .collection('chatroom')
-          .doc(chatRoomId)
+          .doc(widget.chatRoomId)
           .collection('chats')
           .add(messages);
     } else {
@@ -38,23 +43,7 @@ class ChatRoom extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: StreamBuilder<DocumentSnapshot>(
-          stream:
-              _firestore.collection("users").doc(userMap['uid']).snapshots(),
-          builder: (context, snapshot) {
-            if (snapshot.data != null) {
-              return Container(
-                child: Column(
-                  children: [
-                    Text(userMap['name']),
-                  ],
-                ),
-              );
-            } else {
-              return Container();
-            }
-          },
-        ),
+        title: Text(widget.userMap['name']),
       ),
       body: SingleChildScrollView(
         child: Column(
@@ -65,7 +54,7 @@ class ChatRoom extends StatelessWidget {
               child: StreamBuilder<QuerySnapshot>(
                 stream: _firestore
                     .collection('chatroom')
-                    .doc(chatRoomId)
+                    .doc(widget.chatRoomId)
                     .collection('chats')
                     .orderBy("time", descending: false)
                     .snapshots(),
@@ -102,14 +91,17 @@ class ChatRoom extends StatelessWidget {
                       child: TextField(
                         controller: _message,
                         decoration: InputDecoration(
-                            hintText: "Send Message",
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            )),
+                          hintText: "Send Message",
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
                       ),
                     ),
                     IconButton(
-                        icon: Icon(Icons.send), onPressed: onSendMessage),
+                      icon: Icon(Icons.send),
+                      onPressed: onSendMessage,
+                    ),
                   ],
                 ),
               ),
@@ -121,27 +113,31 @@ class ChatRoom extends StatelessWidget {
   }
 
   Widget messages(Size size, Map<String, dynamic> map, BuildContext context) {
-    return Container(
-      width: size.width,
-      alignment: map['sendby'] == _auth.currentUser!.displayName
-          ? Alignment.centerRight
-          : Alignment.centerLeft,
-      child: Container(
-        padding: EdgeInsets.symmetric(vertical: 10, horizontal: 14),
-        margin: EdgeInsets.symmetric(vertical: 5, horizontal: 8),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(15),
-          color: Colors.blue,
-        ),
-        child: Text(
-          map['message'],
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w500,
-            color: Colors.white,
+    if (map['type'] == "text") {
+      return Container(
+        width: size.width,
+        alignment: map['sendby'] == _auth.currentUser!.email
+            ? Alignment.centerRight
+            : Alignment.centerLeft,
+        child: Container(
+          padding: EdgeInsets.symmetric(vertical: 10, horizontal: 14),
+          margin: EdgeInsets.symmetric(vertical: 5, horizontal: 8),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(15),
+            color: Colors.blue,
+          ),
+          child: Text(
+            map['message'],
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w500,
+              color: Colors.white,
+            ),
           ),
         ),
-      ),
-    );
+      );
+    } else {
+      return Container(); // Handle other types of messages as needed
+    }
   }
 }
